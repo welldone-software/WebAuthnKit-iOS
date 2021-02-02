@@ -108,76 +108,49 @@ public class UserConsentUI: UserConsentViewControllerDelegate {
         self.willStartUserInteraction()
         
         return Promise<String> { resolver in
-            
-            DispatchQueue.main.async {
-            
-                let vc = KeyRegistrationViewController(
-                    resolver:          resolver,
-                    config:            self.config,
-                    user:              userEntity,
-                    rp:                rpEntity
-                )
-                
-                vc.delegate = self
-                
-                self.showBackground()
-                
-                self.viewController.present(vc, animated: true, completion: nil)
-                
+            if (config.alwaysShowKeyCreation) {
+                DispatchQueue.main.async {
+                    let vc = KeyRegistrationViewController(
+                        resolver:          resolver,
+                        config:            self.config,
+                        user:              userEntity,
+                        rp:                rpEntity
+                    )
+                    vc.delegate = self
+                    self.showBackground()
+                    self.viewController.present(vc, animated: true, completion: nil)
+                }
+            } else {
+                resolver.fulfill("defaultKey")
             }
-            
         }.then { (keyName: String) -> Promise<String> in
-
             if let reason = self.cancelled {
-
                 self.didFinishUserInteraction()
                 throw reason
-
             } else {
-                
                 if requireVerification {
-                    
                     return self.verifyUser(
                         message: "Create-Key Authentication",
                         params:  keyName
                     )
-                    
                 } else {
-                    
                     return Promise<String>{ $0.fulfill(keyName) }
-                    
                 }
-
             }
-            
         }.then { (keyName: String) -> Promise<String> in
-            
             self.didFinishUserInteraction()
-            
             if let reason = self.cancelled {
-          
                 throw reason
-                
             } else {
-                
                 return Promise<String>{ $0.fulfill(keyName) }
-                
             }
-            
         }.recover { error -> Promise<String> in
-            
             self.didFinishUserInteraction()
-            
             if let reason = self.cancelled {
-                
                 throw reason
-                
             } else {
-                
                throw error
-                
             }
-            
         }
     }
     
@@ -192,58 +165,34 @@ public class UserConsentUI: UserConsentViewControllerDelegate {
         
         return self.userSelectionTask(sources: sources)
             .then { (source: PublicKeyCredentialSource) -> Promise<PublicKeyCredentialSource> in
-                
                 if let reason = self.cancelled {
-                    
                     self.didFinishUserInteraction()
                     throw reason
-                    
                 } else {
-                    
                     if requireVerification {
-                        
                         return self.verifyUser(
                             message: "Use-Key Authentication",
                             params: source
                         )
-                        
                     } else {
-                        
                         return Promise<PublicKeyCredentialSource>{ $0.fulfill(source) }
-                        
                     }
-                    
                 }
         }.then { (source: PublicKeyCredentialSource) -> Promise<PublicKeyCredentialSource> in
-    
             self.didFinishUserInteraction()
-    
             if let reason = self.cancelled {
-    
                 throw reason
-    
             } else {
-    
                 return Promise<PublicKeyCredentialSource>{ $0.fulfill(source) }
-    
             }
-    
         }.recover { error -> Promise<PublicKeyCredentialSource> in
-    
             self.didFinishUserInteraction()
-    
             if let reason = self.cancelled {
-    
                 throw reason
-    
             } else {
-    
                 throw error
-    
             }
-    
         }
-
     }
     
     private func userSelectionTask(sources: [PublicKeyCredentialSource]) -> Promise<PublicKeyCredentialSource> {
